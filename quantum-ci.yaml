@@ -1,0 +1,25 @@
+# quantum-ci.yaml
+# Place this file at the root of your quantum circuit repository.
+# Quantum CI/CD reads it to locate and analyze your circuit on every PR.
+
+circuit:
+  # Dotted Python module path relative to the repository root.
+  # "circuits.example_bell" resolves to circuits/example_bell.py
+  module: "circuits.example_bell"
+
+  # The callable inside that module that returns a QuantumCircuit.
+  # Must accept no arguments (or only the kwargs listed below).
+  function: "build_circuit"
+
+  # Optional static keyword arguments forwarded to the function.
+  # kwargs:
+  #   n_qubits: 4
+
+runner:
+  shots: 1024   # Number of simulation shots (default: 1024)
+  seed: 42      # RNG seed for reproducibility (default: 42)
+
+analysis:
+  # Warn in the PR comment if Total Variation Distance exceeds this value.
+  # TVD of 0.0 = identical distributions; 1.0 = completely different.
+  tvd_warn_threshold: 0.1
