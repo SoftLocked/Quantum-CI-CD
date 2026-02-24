@@ -1,14 +1,15 @@
 # quantum-ci.yaml
+# ─────────────────────────────────────────────────────────────────────────────
 # Place this file at the root of your quantum circuit repository.
-# Quantum CI/CD reads it to locate and analyze your circuit on every PR.
+# Quantum CI reads it on every PR to locate and analyse your circuit.
+# ─────────────────────────────────────────────────────────────────────────────
 
 circuit:
   # Dotted Python module path relative to the repository root.
-  # "circuits.example_bell" resolves to circuits/example_bell.py
+  # "circuits.example_bell" → circuits/example_bell.py
   module: "circuits.example_bell"
 
-  # The callable inside that module that returns a QuantumCircuit.
-  # Must accept no arguments (or only the kwargs listed below).
+  # Callable inside that module that returns a QuantumCircuit.
   function: "build_circuit"
 
   # Optional static keyword arguments forwarded to the function.
@@ -16,10 +17,35 @@ circuit:
   #   n_qubits: 4
 
 runner:
-  shots: 1024   # Number of simulation shots (default: 1024)
-  seed: 42      # RNG seed for reproducibility (default: 42)
+  shots: 1024   # Simulation shots per run  (default: 1024)
+  seed:  42     # RNG seed for reproducibility (default: 42)
 
 analysis:
-  # Warn in the PR comment if Total Variation Distance exceeds this value.
+  # ── Behavioral fidelity ─────────────────────────────────────────────────────
+  # Warn in the PR comment if TVD exceeds this value (informational only).
+  tvd_warn_threshold: 0.05
+
+  # Block the merge if TVD exceeds this value (exit 1).
   # TVD of 0.0 = identical distributions; 1.0 = completely different.
-  tvd_warn_threshold: 0.1
+  tvd_block_threshold: 0.1
+
+  # ── QPU resource efficiency ─────────────────────────────────────────────────
+  # Block the merge if the PR's transpiled 2-qubit gate count increases by
+  # more than this percentage relative to the base branch.
+  # Prevents QPU cost regressions.
+  transpilation_decay_threshold_pct: 15.0
+
+  # ── Circuit depth (optional) ────────────────────────────────────────────────
+  # Block if circuit depth increases by more than this percentage.
+  # Uncomment to enable:
+  # max_depth_increase_pct: 20.0
+
+observability:
+  # OTLP HTTP endpoint for Grafana / OpenTelemetry Collector.
+  # Leave empty to disable remote export (metrics still written to history_file).
+  otlp_endpoint: ""
+
+  # Path to the JSONL file used for longitudinal drift tracking.
+  # In GitHub Actions, upload this as a workflow artifact or persist it on a
+  # dedicated branch to retain history across runs.
+  history_file: ".quantum-ci-history.jsonl"

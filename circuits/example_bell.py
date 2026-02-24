@@ -18,5 +18,6 @@ def build_circuit() -> QuantumCircuit:
     """Build and return a 2-qubit Bell state |Φ+⟩ = (|00⟩ + |11⟩) / √2."""
     qc = QuantumCircuit(2)
     qc.h(0)
+    qc.t(0)
     qc.cx(0, 1)
     return qc

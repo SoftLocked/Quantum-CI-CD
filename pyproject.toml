@@ -4,14 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quantum-ci"
-version = "0.1.0"
-description = "Automated circuit analysis and comparison for quantum engineering PRs"
+version = "0.2.0"
+description = "Hermetic CI/CD engine for quantum circuits — build checks, TVD diffing, transpilation fidelity, and OpenTelemetry observability"
 requires-python = ">=3.10"
 dependencies = [
     "qiskit>=1.0,<2.0",
     "qiskit-aer>=0.14",
     "PyYAML>=6.0",
     "requests>=2.31",
+]
+
+[project.optional-dependencies]
+# Install with: pip install quantum-ci[observability]
+observability = [
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
 ]
 
 [project.scripts]

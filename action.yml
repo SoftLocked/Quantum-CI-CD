@@ -1,0 +1,104 @@
+name: 'Quantum CI'
+description: >
+  Hermetic CI/CD engine for Qiskit quantum circuits.
+  Performs build verification, behavioral TVD diffing, transpilation fidelity
+  analysis, multi-backend integration testing, and longitudinal drift tracking
+  via OpenTelemetry — all reported as a single PR comment.
+author: 'hariv'
+
+branding:
+  icon: 'cpu'
+  color: 'purple'
+
+inputs:
+  python-version:
+    description: 'Python version used for simulation'
+    required: false
+    default: '3.11'
+
+  tvd-block-threshold:
+    description: >
+      Maximum Total Variation Distance between PR and base output distributions
+      before the merge is blocked. Overrides tvd_block_threshold in
+      quantum-ci.yaml. (default: 0.1)
+    required: false
+    default: ''
+
+  transpilation-decay-threshold:
+    description: >
+      Maximum tolerated percentage increase in native 2-qubit gate count after
+      transpilation relative to the base branch. Overrides
+      transpilation_decay_threshold_pct in quantum-ci.yaml. (default: 15.0)
+    required: false
+    default: ''
+
+  otlp-endpoint:
+    description: >
+      OTLP HTTP endpoint for OpenTelemetry export, e.g. http://localhost:4318.
+      Leave empty to skip remote metric export.
+    required: false
+    default: ''
+
+  history-file:
+    description: >
+      Path to the JSONL history file used for longitudinal drift tracking.
+      (default: .quantum-ci-history.jsonl)
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        path: _quantum_ci_pr
+        fetch-depth: 1
+
+    - name: Checkout base branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.base.ref }}
+        path: _quantum_ci_base
+        fetch-depth: 1
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Quantum CI
+      shell: bash
+      run: pip install -e "${{ github.action_path }}[observability]"
+
+    - name: Run Quantum CI analysis
+      shell: bash
+      env:
+        GITHUB_TOKEN:              ${{ github.token }}
+        PR_PATH:                   ${{ github.workspace }}/_quantum_ci_pr
+        BASE_PATH:                 ${{ github.workspace }}/_quantum_ci_base
+        PR_NUMBER:                 ${{ github.event.pull_request.number }}
+        REPO:                      ${{ github.repository }}
+        QUANTUM_CI_OTLP_ENDPOINT:  ${{ inputs.otlp-endpoint }}
+      run: |
+        EXTRA_ARGS=""
+        if [ -n "${{ inputs.tvd-block-threshold }}" ]; then
+          EXTRA_ARGS="$EXTRA_ARGS --tvd-block-threshold ${{ inputs.tvd-block-threshold }}"
+        fi
+        if [ -n "${{ inputs.transpilation-decay-threshold }}" ]; then
+          EXTRA_ARGS="$EXTRA_ARGS --transpilation-decay-threshold ${{ inputs.transpilation-decay-threshold }}"
+        fi
+        if [ -n "${{ inputs.history-file }}" ]; then
+          EXTRA_ARGS="$EXTRA_ARGS --history-file ${{ inputs.history-file }}"
+        fi
+        if [ -n "${{ inputs.otlp-endpoint }}" ]; then
+          EXTRA_ARGS="$EXTRA_ARGS --otlp-endpoint ${{ inputs.otlp-endpoint }}"
+        fi
+
+        python -m quantum_ci.cli \
+          --pr-path   "$PR_PATH"   \
+          --base-path "$BASE_PATH" \
+          --pr-number "$PR_NUMBER" \
+          --repo      "$REPO"      \
+          $EXTRA_ARGS
